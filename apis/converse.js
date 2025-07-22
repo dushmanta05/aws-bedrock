@@ -1,0 +1,38 @@
+import { BedrockRuntimeClient, ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
+
+const { AWS_REGION: awsRegion } = process.env;
+
+const client = new BedrockRuntimeClient({ region: awsRegion });
+const modelId = 'amazon.titan-text-lite-v1';
+
+const userMessage = "Describe the purpose of a 'hello world' program in one line.";
+
+const conversation = [
+  {
+    role: 'user',
+    content: [{ text: userMessage }],
+  },
+];
+
+const inferenceConfig = {
+  maxTokens: 512,
+  temperature: 0.5,
+  topP: 0.9,
+};
+
+const command = new ConverseCommand({
+  modelId,
+  messages: conversation,
+  inferenceConfig,
+});
+
+export const awsTitanConverse = async () => {
+  try {
+    const response = await client.send(command);
+    const responseText = response.output.message.content[0].text;
+    console.log(responseText);
+  } catch (err) {
+    console.error(`ERROR: Can't invoke '${modelId}'. Reason: ${err}`);
+    process.exit(1);
+  }
+};
