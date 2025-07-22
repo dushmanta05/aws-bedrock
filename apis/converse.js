@@ -1,10 +1,14 @@
-import { BedrockRuntimeClient, ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
+import {
+  BedrockRuntimeClient,
+  ConverseCommand,
+  ConverseStreamCommand,
+} from '@aws-sdk/client-bedrock-runtime';
 
 const { AWS_REGION: awsRegion, AWS_BEDROCK_MODEL: modelId } = process.env;
 
 const client = new BedrockRuntimeClient({ region: awsRegion });
 
-const userMessage = "Describe the purpose of a 'hello world' program in one line.";
+const userMessage = 'Tell me about Max Verstappen.';
 
 const conversation = [
   {
@@ -19,17 +23,37 @@ const inferenceConfig = {
   topP: 0.9,
 };
 
-const command = new ConverseCommand({
-  modelId,
-  messages: conversation,
-  inferenceConfig,
-});
-
 export const awsTitanConverse = async () => {
+  const command = new ConverseCommand({
+    modelId,
+    messages: conversation,
+    inferenceConfig,
+  });
+
   try {
     const response = await client.send(command);
     const responseText = response.output.message.content[0].text;
     console.log(responseText);
+  } catch (err) {
+    console.error(`ERROR: Can't invoke '${modelId}'. Reason: ${err}`);
+    process.exit(1);
+  }
+};
+
+export const awsTitanStreamConverse = async () => {
+  const command = new ConverseStreamCommand({
+    modelId,
+    messages: conversation,
+    inferenceConfig,
+  });
+
+  try {
+    const response = await client.send(command);
+    for await (const item of response.stream) {
+      if (item.contentBlockDelta?.delta?.text) {
+        process.stdout.write(item.contentBlockDelta.delta.text);
+      }
+    }
   } catch (err) {
     console.error(`ERROR: Can't invoke '${modelId}'. Reason: ${err}`);
     process.exit(1);
