@@ -1,0 +1,17 @@
+{
+  "name": "node-bedrock",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "keywords": [],
+  "author": "Dushmanta",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-bedrock": "^3.848.0",
+    "dotenv": "^17.2.0"
+  }
+}
