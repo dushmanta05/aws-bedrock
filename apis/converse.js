@@ -1,9 +1,8 @@
 import { BedrockRuntimeClient, ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
 
-const { AWS_REGION: awsRegion } = process.env;
+const { AWS_REGION: awsRegion, AWS_BEDROCK_MODEL: modelId } = process.env;
 
 const client = new BedrockRuntimeClient({ region: awsRegion });
-const modelId = 'amazon.titan-text-lite-v1';
 
 const userMessage = "Describe the purpose of a 'hello world' program in one line.";
 

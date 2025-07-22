@@ -4,7 +4,7 @@ import {
   ListFoundationModelsCommand,
 } from '@aws-sdk/client-bedrock';
 
-const { AWS_REGION: awsRegion } = process.env;
+const { AWS_REGION: awsRegion, AWS_BEDROCK_MODEL: modelIdentifier } = process.env;
 
 /**
  * List the available Amazon Bedrock foundation models.
@@ -35,7 +35,7 @@ export const getFoundationModel = async () => {
   const client = new BedrockClient();
 
   const command = new GetFoundationModelCommand({
-    modelIdentifier: 'amazon.titan-text-lite-v1',
+    modelIdentifier: modelIdentifier,
   });
 
   const response = await client.send(command);
