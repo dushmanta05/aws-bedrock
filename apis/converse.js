@@ -23,6 +23,11 @@ const inferenceConfig = {
   topP: 0.9,
 };
 
+const buildMessage = (role, text) => ({
+  role,
+  content: [{ text }],
+});
+
 export const awsTitanConverse = async () => {
   const command = new ConverseCommand({
     modelId,
@@ -54,6 +59,43 @@ export const awsTitanStreamConverse = async () => {
         process.stdout.write(item.contentBlockDelta.delta.text);
       }
     }
+  } catch (err) {
+    console.error(`ERROR: Can't invoke '${modelId}'. Reason: ${err}`);
+    process.exit(1);
+  }
+};
+
+export const multiTurnChat = async () => {
+  const firstUserMessage = 'Tell me about Max Verstappen.';
+  const firstConversation = [buildMessage('user', firstUserMessage)];
+
+  try {
+    const firstCommand = new ConverseCommand({
+      modelId,
+      messages: firstConversation,
+      inferenceConfig,
+    });
+
+    const firstResponse = await client.send(firstCommand);
+    const firstAssistantReply = firstResponse.output.message.content[0].text;
+    console.log(`Assistant (1st reply): ${firstAssistantReply}`);
+
+    const secondUserMessage = 'What team does he drive for?';
+    const secondConversation = [
+      buildMessage('user', firstUserMessage),
+      buildMessage('assistant', firstAssistantReply),
+      buildMessage('user', secondUserMessage),
+    ];
+
+    const secondCommand = new ConverseCommand({
+      modelId,
+      messages: secondConversation,
+      inferenceConfig,
+    });
+
+    const secondResponse = await client.send(secondCommand);
+    const secondAssistantReply = secondResponse.output.message.content[0].text;
+    console.log(`Assistant (2nd reply): ${secondAssistantReply}`);
   } catch (err) {
     console.error(`ERROR: Can't invoke '${modelId}'. Reason: ${err}`);
     process.exit(1);
