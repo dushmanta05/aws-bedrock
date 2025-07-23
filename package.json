@@ -5,7 +5,7 @@
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "start": "node app.js"
+    "start": "nodemon app.js"
   },
   "keywords": [],
   "author": "Dushmanta",
@@ -13,6 +13,7 @@
   "dependencies": {
     "@aws-sdk/client-bedrock": "^3.848.0",
     "@aws-sdk/client-bedrock-runtime": "^3.848.0",
-    "dotenv": "^17.2.0"
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0"
   }
 }

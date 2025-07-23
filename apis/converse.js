@@ -101,3 +101,71 @@ export const multiTurnChat = async () => {
     process.exit(1);
   }
 };
+
+export const structuredResponse = async () => {
+  const tools = [
+    {
+      toolSpec: {
+        name: 'race_driver_info',
+        description: 'Returns information about a Formula 1 driver in structured format',
+        inputSchema: {
+          json: {
+            type: 'object',
+            properties: {
+              about: { type: 'string', description: 'Few lines about the driver' },
+              name: { type: 'string', description: 'Full name of the driver' },
+              birthDate: { type: 'string', description: 'Date of birth in YYYY-MM-DD' },
+              nationality: { type: 'string', description: 'Nationality of the driver' },
+              team: { type: 'string', description: 'Current F1 team' },
+              championshipsWon: { type: 'integer', description: 'Number of world titles won' },
+            },
+            required: ['name', 'birthDate', 'nationality', 'team', 'championshipsWon'],
+          },
+        },
+      },
+    },
+  ];
+
+  const structuredPrompt = `
+Extract structured information about the following Formula 1 driver. 
+Only return structured JSON using the provided schema.
+
+Driver: Max Verstappen
+`;
+
+  const conversation = [
+    {
+      role: 'user',
+      content: [{ text: structuredPrompt }],
+    },
+  ];
+
+  const command = new ConverseCommand({
+    modelId,
+    messages: conversation,
+    inferenceConfig,
+    toolConfig: {
+      tools: tools,
+      toolChoice: { auto: {} },
+    },
+  });
+
+  try {
+    const response = await client.send(command);
+    const toolResponse = response.output?.message?.content;
+    let textResponse;
+    let outputResponse;
+
+    if (toolResponse.length === 2) {
+      textResponse = toolResponse[0]?.text;
+      outputResponse = toolResponse[1]?.toolUse?.input;
+    } else if (toolResponse.length === 1) {
+      outputResponse = toolResponse[0]?.toolUse?.input;
+    } else {
+    }
+    return { success: true, text: textResponse, data: outputResponse };
+  } catch (error) {
+    console.error(`ERROR: Structured response failed for '${modelId}': ${error}`);
+    return { success: false, response: null, error: error };
+  }
+};
