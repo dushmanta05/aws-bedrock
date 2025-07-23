@@ -102,41 +102,76 @@ export const multiTurnChat = async () => {
   }
 };
 
-export const structuredResponse = async () => {
-  const tools = [
-    {
-      toolSpec: {
-        name: 'race_driver_info',
-        description: 'Returns information about a Formula 1 driver in structured format',
-        inputSchema: {
-          json: {
-            type: 'object',
-            properties: {
-              about: { type: 'string', description: 'Few lines about the driver' },
-              name: { type: 'string', description: 'Full name of the driver' },
-              birthDate: { type: 'string', description: 'Date of birth in YYYY-MM-DD' },
-              nationality: { type: 'string', description: 'Nationality of the driver' },
-              team: { type: 'string', description: 'Current F1 team' },
-              championshipsWon: { type: 'integer', description: 'Number of world titles won' },
-            },
-            required: ['name', 'birthDate', 'nationality', 'team', 'championshipsWon'],
+const tools = [
+  {
+    toolSpec: {
+      name: 'race_driver_info',
+      description: 'Returns information about a Formula 1 driver in structured format',
+      inputSchema: {
+        json: {
+          type: 'object',
+          properties: {
+            about: { type: 'string', description: 'Few lines about the driver' },
+            name: { type: 'string', description: 'Full name of the driver' },
+            birthDate: { type: 'string', description: 'Date of birth in YYYY-MM-DD' },
+            nationality: { type: 'string', description: 'Nationality of the driver' },
+            team: { type: 'string', description: 'Current F1 team' },
+            championshipsWon: { type: 'integer', description: 'Number of world titles won' },
           },
+          required: ['name', 'birthDate', 'nationality', 'team', 'championshipsWon'],
         },
       },
     },
-  ];
+  },
+  {
+    toolSpec: {
+      name: 'javascript_course_generator',
+      description: 'Generates a structured JavaScript course with multiple chapters',
+      inputSchema: {
+        json: {
+          type: 'object',
+          properties: {
+            courseTitle: { type: 'string', description: 'Title of the course' },
+            chapters: {
+              type: 'array',
+              description: 'List of course chapters',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', description: 'Title of the chapter' },
+                  description: { type: 'string', description: 'Description of the chapter' },
+                },
+                required: ['title', 'description'],
+              },
+            },
+          },
+          required: ['courseTitle', 'chapters'],
+        },
+      },
+    },
+  },
+];
 
-  const structuredPrompt = `
+export const driverPrompt = `
 Extract structured information about the following Formula 1 driver. 
 Only return structured JSON using the provided schema.
 
 Driver: Max Verstappen
 `;
 
+export const coursePrompt = `
+Generate a structured JavaScript course. 
+The course should have a title and a list of chapters. 
+Each chapter should include a title and a short description.
+
+Only return structured JSON using the provided schema.
+`;
+
+export const structuredResponse = async (prompt = coursePrompt) => {
   const conversation = [
     {
       role: 'user',
-      content: [{ text: structuredPrompt }],
+      content: [{ text: prompt }],
     },
   ];
 
@@ -145,7 +180,7 @@ Driver: Max Verstappen
     messages: conversation,
     inferenceConfig,
     toolConfig: {
-      tools: tools,
+      tools,
       toolChoice: { auto: {} },
     },
   });
@@ -161,11 +196,11 @@ Driver: Max Verstappen
       outputResponse = toolResponse[1]?.toolUse?.input;
     } else if (toolResponse.length === 1) {
       outputResponse = toolResponse[0]?.toolUse?.input;
-    } else {
     }
+
     return { success: true, text: textResponse, data: outputResponse };
   } catch (error) {
     console.error(`ERROR: Structured response failed for '${modelId}': ${error}`);
-    return { success: false, response: null, error: error };
+    return { success: false, response: null, error };
   }
 };
