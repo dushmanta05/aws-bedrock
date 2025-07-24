@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'bedrock' => [
+        'api_key' => env('BEDROCK_API_KEY'),
+        'model_id' => env('BEDROCK_MODEL_ID'),
+        'region' => env('BEDROCK_REGION'),
+    ],
 ];
