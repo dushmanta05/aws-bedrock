@@ -1,3 +1,6 @@
 bruno/
 .vscode/
 .zed/
+node/node_modules/
+laravel/vendor/
+**/.env
