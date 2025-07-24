@@ -1,1 +1,1 @@
-# Bedrock with Node.js
+# AWS Bedrock Implementation
