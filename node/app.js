@@ -8,9 +8,11 @@ import {
   multiTurnChat,
   structuredResponse,
 } from './sdk/converse.js';
+import { generateContent, generateStructuredContent } from './rest-api/index.js';
 
 
 const app = express();
+app.use(express.json());
 const port = process.env.PORT || 3000;
 
 app.get('/converse', async (_, res) => {
@@ -68,6 +70,27 @@ app.get('/model', async (_, res) => {
   } catch (err) {
     res.status(500).json({ success: false, data: null, message: err.message });
   }
+});
+
+app.post('/bedrock/generate', async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(422).json({ error: 'prompt is required' });
+
+  const result = await generateContent(prompt);
+  res.status(result.success ? 200 : 500).json(
+    result.success
+      ? { response: result.data }
+      : { error: 'Failed to generate response from Bedrock' }
+  );
+});
+
+app.get('/bedrock/structured', async (_, res) => {
+  const result = await generateStructuredContent();
+  res.status(result.success ? 200 : 500).json(
+    result.success
+      ? { success: true, text: result.text, data: result.data }
+      : { error: 'Failed to generate structured content' }
+  );
 });
 
 app.listen(port, () => {
