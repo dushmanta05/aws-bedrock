@@ -1,39 +1,72 @@
-import { fileURLToPath } from 'node:url';
-import 'dotenv/config';
 import express from 'express';
+import 'dotenv/config';
 
-const app = express();
-const port = process.env.PORT || 3000;
-
-import { getFoundationModel, listFoundationModels } from './apis/index.js';
+import { getFoundationModel, listFoundationModels } from './sdk/index.js';
 import {
   awsTitanConverse,
   awsTitanStreamConverse,
   multiTurnChat,
   structuredResponse,
-} from './apis/converse.js';
+} from './sdk/converse.js';
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  /*
-  const models = await listFoundationModels();
-  const models = await getFoundationModel();
-  console.log(models);
-  await awsTitanConverse();
-  (async () => {
-    await awsTitanStreamConverse();
-  })();
-  await multiTurnChat();
-  await structuredResponse();
-  */
-}
 
-app.get('/converse', async (req, res) => {
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.get('/converse', async (_, res) => {
+  const result = await awsTitanConverse();
+  res.status(result.success ? 200 : 500).json(result);
+});
+
+app.get('/converse/stream', async (_, res) => {
   try {
-    const result = await structuredResponse();
-    res.json(result);
-  } catch (error) {
-    console.error('Error in /structured route:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.flushHeaders?.();
+
+    for await (const chunk of awsTitanStreamConverse()) {
+      res.write(`${chunk} \n\n`);
+      res.flush?.();
+    }
+
+    res.end();
+  } catch (err) {
+    console.error('Stream error:', err);
+    res.status(500).send(`Error: ${err.message}`);
+  }
+});
+
+app.get('/converse/multi-turn', async (_, res) => {
+  const result = await multiTurnChat();
+  res.status(result.success ? 200 : 500).json(result);
+});
+
+app.get('/structured/course', async (_, res) => {
+  const result = await structuredResponse('coursePrompt');
+  res.status(result.success ? 200 : 500).json(result);
+});
+
+app.get('/structured/driver', async (_, res) => {
+  const result = await structuredResponse('driverPrompt');
+  res.status(result.success ? 200 : 500).json(result);
+});
+
+app.get('/models', async (_, res) => {
+  try {
+    const models = await listFoundationModels();
+    res.json({ success: true, data: models });
+  } catch (err) {
+    res.status(500).json({ success: false, data: null, message: err.message });
+  }
+});
+
+app.get('/model', async (_, res) => {
+  try {
+    const model = await getFoundationModel();
+    res.json({ success: true, data: model });
+  } catch (err) {
+    res.status(500).json({ success: false, data: null, message: err.message });
   }
 });
 

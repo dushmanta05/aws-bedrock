@@ -8,17 +8,8 @@ const { AWS_REGION: awsRegion, AWS_BEDROCK_MODEL: modelId } = process.env;
 
 const client = new BedrockRuntimeClient({ region: awsRegion });
 
-const userMessage = 'Tell me about Max Verstappen.';
-
-const conversation = [
-  {
-    role: 'user',
-    content: [{ text: userMessage }],
-  },
-];
-
 const inferenceConfig = {
-  maxTokens: 512,
+  maxTokens: 4096,
   temperature: 0.5,
   topP: 0.9,
 };
@@ -29,6 +20,10 @@ const buildMessage = (role, text) => ({
 });
 
 export const awsTitanConverse = async () => {
+  const conversation = [
+    { role: 'user', content: [{ text: 'Tell me about Max Verstappen.' }] },
+  ];
+
   const command = new ConverseCommand({
     modelId,
     messages: conversation,
@@ -38,14 +33,17 @@ export const awsTitanConverse = async () => {
   try {
     const response = await client.send(command);
     const responseText = response.output.message.content[0].text;
-    console.log(responseText);
+    return { success: true, data: responseText };
   } catch (err) {
-    console.error(`ERROR: Can't invoke '${modelId}'. Reason: ${err}`);
-    process.exit(1);
+    return { success: false, data: null, message: err.message };
   }
 };
 
-export const awsTitanStreamConverse = async () => {
+export const awsTitanStreamConverse = async function* () {
+  const conversation = [
+    { role: 'user', content: [{ text: 'Tell me about Max Verstappen, Red Bull Racing and his career over the years.' }] },
+  ];
+
   const command = new ConverseStreamCommand({
     modelId,
     messages: conversation,
@@ -56,12 +54,11 @@ export const awsTitanStreamConverse = async () => {
     const response = await client.send(command);
     for await (const item of response.stream) {
       if (item.contentBlockDelta?.delta?.text) {
-        process.stdout.write(item.contentBlockDelta.delta.text);
+        yield item.contentBlockDelta.delta.text;
       }
     }
   } catch (err) {
-    console.error(`ERROR: Can't invoke '${modelId}'. Reason: ${err}`);
-    process.exit(1);
+    throw new Error(err.message);
   }
 };
 
@@ -78,7 +75,7 @@ export const multiTurnChat = async () => {
 
     const firstResponse = await client.send(firstCommand);
     const firstAssistantReply = firstResponse.output.message.content[0].text;
-    console.log(`Assistant (1st reply): ${firstAssistantReply}`);
+    console.log(firstAssistantReply)
 
     const secondUserMessage = 'What team does he drive for?';
     const secondConversation = [
@@ -95,83 +92,92 @@ export const multiTurnChat = async () => {
 
     const secondResponse = await client.send(secondCommand);
     const secondAssistantReply = secondResponse.output.message.content[0].text;
-    console.log(`Assistant (2nd reply): ${secondAssistantReply}`);
+
+    return {
+      success: true,
+      data: {
+        firstReply: firstAssistantReply,
+        secondReply: secondAssistantReply,
+      },
+    };
   } catch (err) {
-    console.error(`ERROR: Can't invoke '${modelId}'. Reason: ${err}`);
-    process.exit(1);
+    return { success: false, data: null, message: err.message };
   }
 };
 
-const tools = [
-  {
-    toolSpec: {
-      name: 'race_driver_info',
-      description: 'Returns information about a Formula 1 driver in structured format',
-      inputSchema: {
-        json: {
-          type: 'object',
-          properties: {
-            about: { type: 'string', description: 'Few lines about the driver' },
-            name: { type: 'string', description: 'Full name of the driver' },
-            birthDate: { type: 'string', description: 'Date of birth in YYYY-MM-DD' },
-            nationality: { type: 'string', description: 'Nationality of the driver' },
-            team: { type: 'string', description: 'Current F1 team' },
-            championshipsWon: { type: 'integer', description: 'Number of world titles won' },
+const toolsData = {
+  driverTool: [
+    {
+      toolSpec: {
+        name: 'race_driver_info',
+        description: 'Returns information about a Formula 1 driver in structured format',
+        inputSchema: {
+          json: {
+            type: 'object',
+            properties: {
+              about: { type: 'string' },
+              name: { type: 'string' },
+              birthDate: { type: 'string' },
+              nationality: { type: 'string' },
+              team: { type: 'string' },
+              championshipsWon: { type: 'integer' },
+            },
+            required: ['name', 'birthDate', 'nationality', 'team', 'championshipsWon'],
           },
-          required: ['name', 'birthDate', 'nationality', 'team', 'championshipsWon'],
         },
       },
     },
-  },
-  {
-    toolSpec: {
-      name: 'javascript_course_generator',
-      description: 'Generates a structured JavaScript course with multiple chapters',
-      inputSchema: {
-        json: {
-          type: 'object',
-          properties: {
-            courseTitle: { type: 'string', description: 'Title of the course' },
-            chapters: {
-              type: 'array',
-              description: 'List of course chapters',
-              items: {
-                type: 'object',
-                properties: {
-                  title: { type: 'string', description: 'Title of the chapter' },
-                  description: { type: 'string', description: 'Description of the chapter' },
+  ],
+  courseTool: [
+    {
+      toolSpec: {
+        name: 'javascript_course_generator',
+        description: 'Generates a structured JavaScript course with multiple chapters',
+        inputSchema: {
+          json: {
+            type: 'object',
+            properties: {
+              courseTitle: { type: 'string' },
+              chapters: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                  },
+                  required: ['title', 'description'],
                 },
-                required: ['title', 'description'],
               },
             },
+            required: ['courseTitle', 'chapters'],
           },
-          required: ['courseTitle', 'chapters'],
         },
       },
     },
-  },
-];
+  ]
+}
 
-export const driverPrompt = `
-Extract structured information about the following Formula 1 driver. 
+const driverPrompt = `
+Extract structured information about the following Formula 1 driver.
 Only return structured JSON using the provided schema.
 
 Driver: Max Verstappen
 `;
 
-export const coursePrompt = `
-Generate a structured JavaScript course. 
-The course should have a title and a list of chapters. 
+const coursePrompt = `
+Generate a structured JavaScript course.
+The course should have a title and a list of chapters.
 Each chapter should include a title and a short description.
 
 Only return structured JSON using the provided schema.
 `;
 
-export const structuredResponse = async (prompt = coursePrompt) => {
+export const structuredResponse = async (prompt = 'coursePrompt') => {
   const conversation = [
     {
       role: 'user',
-      content: [{ text: prompt }],
+      content: [{ text: prompt === 'coursePrompt' ? coursePrompt : driverPrompt }],
     },
   ];
 
@@ -180,7 +186,7 @@ export const structuredResponse = async (prompt = coursePrompt) => {
     messages: conversation,
     inferenceConfig,
     toolConfig: {
-      tools,
+      tools: prompt === 'coursePrompt' ? toolsData.courseTool : toolsData.driverTool,
       toolChoice: { auto: {} },
     },
   });
@@ -188,6 +194,7 @@ export const structuredResponse = async (prompt = coursePrompt) => {
   try {
     const response = await client.send(command);
     const toolResponse = response.output?.message?.content;
+
     let textResponse;
     let outputResponse;
 
@@ -200,7 +207,7 @@ export const structuredResponse = async (prompt = coursePrompt) => {
 
     return { success: true, text: textResponse, data: outputResponse };
   } catch (error) {
-    console.error(`ERROR: Structured response failed for '${modelId}': ${error}`);
-    return { success: false, response: null, error };
+    console.log(error)
+    return { success: false, data: null, message: error.message };
   }
 };
