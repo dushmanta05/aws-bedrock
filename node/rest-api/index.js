@@ -11,26 +11,26 @@ const generateContent = async (prompt) => {
     messages: [
       {
         role: 'user',
-        content: [{ text: prompt }]
-      }
-    ]
+        content: [{ text: prompt }],
+      },
+    ],
   };
 
   try {
     const response = await axios.post(url, payload, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      }
+        Authorization: `Bearer ${apiKey}`,
+      },
     });
 
     const content = response.data?.output?.message?.content;
-    const text = content?.find(c => c.text)?.text;
+    const text = content?.find((c) => c.text)?.text;
     return { success: true, data: text || null };
   } catch (err) {
     return {
       success: false,
-      message: err.response?.data || err.message
+      message: err.response?.data || err.message,
     };
   }
 };
@@ -47,8 +47,8 @@ Only return structured JSON using the provided schema.`;
   const messages = [
     {
       role: 'user',
-      content: [{ text: prompt }]
-    }
+      content: [{ text: prompt }],
+    },
   ];
 
   const tools = [
@@ -62,7 +62,7 @@ Only return structured JSON using the provided schema.`;
             properties: {
               courseTitle: {
                 type: 'string',
-                description: 'Title of the course'
+                description: 'Title of the course',
               },
               chapters: {
                 type: 'array',
@@ -71,33 +71,33 @@ Only return structured JSON using the provided schema.`;
                   type: 'object',
                   properties: {
                     title: { type: 'string', description: 'Title of the chapter' },
-                    description: { type: 'string', description: 'Description of the chapter' }
+                    description: { type: 'string', description: 'Description of the chapter' },
                   },
-                  required: ['title', 'description']
-                }
-              }
+                  required: ['title', 'description'],
+                },
+              },
             },
-            required: ['courseTitle', 'chapters']
-          }
-        }
-      }
-    }
+            required: ['courseTitle', 'chapters'],
+          },
+        },
+      },
+    },
   ];
 
   const payload = {
     messages,
     toolConfig: {
       tools,
-      toolChoice: { auto: {} }
-    }
+      toolChoice: { auto: {} },
+    },
   };
 
   try {
     const response = await axios.post(url, payload, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      }
+        Authorization: `Bearer ${apiKey}`,
+      },
     });
 
     const content = response.data?.output?.message?.content || [];
@@ -112,7 +112,7 @@ Only return structured JSON using the provided schema.`;
   } catch (err) {
     return {
       success: false,
-      message: err.response?.data || err.message
+      message: err.response?.data || err.message,
     };
   }
 };

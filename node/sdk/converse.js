@@ -20,9 +20,7 @@ const buildMessage = (role, text) => ({
 });
 
 export const awsTitanConverse = async () => {
-  const conversation = [
-    { role: 'user', content: [{ text: 'Tell me about Max Verstappen.' }] },
-  ];
+  const conversation = [{ role: 'user', content: [{ text: 'Tell me about Max Verstappen.' }] }];
 
   const command = new ConverseCommand({
     modelId,
@@ -33,7 +31,7 @@ export const awsTitanConverse = async () => {
   try {
     const response = await client.send(command);
     const responseText = response.output.message.content[0].text;
-    return { success: true, data: responseText };
+    return { success: true, data: responseText, response: response };
   } catch (err) {
     return { success: false, data: null, message: err.message };
   }
@@ -41,7 +39,12 @@ export const awsTitanConverse = async () => {
 
 export const awsTitanStreamConverse = async function* () {
   const conversation = [
-    { role: 'user', content: [{ text: 'Tell me about Max Verstappen, Red Bull Racing and his career over the years.' }] },
+    {
+      role: 'user',
+      content: [
+        { text: 'Tell me about Max Verstappen, Red Bull Racing and his career over the years.' },
+      ],
+    },
   ];
 
   const command = new ConverseStreamCommand({
@@ -75,7 +78,7 @@ export const multiTurnChat = async () => {
 
     const firstResponse = await client.send(firstCommand);
     const firstAssistantReply = firstResponse.output.message.content[0].text;
-    console.log(firstAssistantReply)
+    console.log(firstAssistantReply);
 
     const secondUserMessage = 'What team does he drive for?';
     const secondConversation = [
@@ -155,8 +158,8 @@ const toolsData = {
         },
       },
     },
-  ]
-}
+  ],
+};
 
 const driverPrompt = `
 Extract structured information about the following Formula 1 driver.
@@ -207,7 +210,7 @@ export const structuredResponse = async (prompt = 'coursePrompt') => {
 
     return { success: true, text: textResponse, data: outputResponse };
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return { success: false, data: null, message: error.message };
   }
 };
