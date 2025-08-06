@@ -57,7 +57,9 @@ export const awsTitanStreamConverse = async function* () {
     const response = await client.send(command);
     for await (const item of response.stream) {
       if (item.contentBlockDelta?.delta?.text) {
-        yield item.contentBlockDelta.delta.text;
+        const chunk = item.contentBlockDelta.delta.text;
+        console.log(`${chunk}\n----`);
+        yield chunk;
       }
     }
   } catch (err) {
@@ -102,6 +104,7 @@ export const multiTurnChat = async () => {
         firstReply: firstAssistantReply,
         secondReply: secondAssistantReply,
       },
+      response: secondResponse,
     };
   } catch (err) {
     return { success: false, data: null, message: err.message };
@@ -173,7 +176,7 @@ Generate a structured JavaScript course.
 The course should have a title and a list of chapters.
 Each chapter should include a title and a short description.
 
-Only return structured JSON using the provided schema.
+Only return structured JSON using the provided schema and return chapters as an array of JSON objects, not a stringified JSON.
 `;
 
 export const structuredResponse = async (prompt = 'coursePrompt') => {
@@ -208,7 +211,7 @@ export const structuredResponse = async (prompt = 'coursePrompt') => {
       outputResponse = toolResponse[0]?.toolUse?.input;
     }
 
-    return { success: true, text: textResponse, data: outputResponse };
+    return { success: true, text: textResponse, data: outputResponse, response };
   } catch (error) {
     console.log(error);
     return { success: false, data: null, message: error.message };

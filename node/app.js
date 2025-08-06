@@ -8,8 +8,12 @@ import {
   multiTurnChat,
   structuredResponse,
 } from './sdk/converse.js';
-import { generateContent, generateStructuredContent } from './rest-api/index.js';
-
+import {
+  generateContent,
+  generateStructuredContent,
+  multiTurnChatREST,
+  streamConverse,
+} from './rest-api/index.js';
 
 const app = express();
 app.use(express.json());
@@ -77,20 +81,44 @@ app.post('/bedrock/generate', async (req, res) => {
   if (!prompt) return res.status(422).json({ error: 'prompt is required' });
 
   const result = await generateContent(prompt);
-  res.status(result.success ? 200 : 500).json(
-    result.success
-      ? { response: result.data }
-      : { error: 'Failed to generate response from Bedrock' }
-  );
+  res
+    .status(result.success ? 200 : 500)
+    .json(
+      result.success
+        ? { data: result.data, response: result?.response }
+        : { error: 'Failed to generate response from Bedrock' }
+    );
+});
+
+app.post('/bedrock/stream', async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(422).json({ error: 'prompt is required' });
+
+  await streamConverse(prompt);
+
+  res.status(200).json({ success: true, message: 'Stream complete. Check terminal for logs.' });
+});
+
+app.get('/bedrock/multi-turn', async (_, res) => {
+  const result = await multiTurnChatREST();
+  res
+    .status(result.success ? 200 : 500)
+    .json(
+      result.success
+        ? { success: true, response: result.response, data: result.data }
+        : { error: 'Failed to generate structured content' }
+    );
 });
 
 app.get('/bedrock/structured', async (_, res) => {
   const result = await generateStructuredContent();
-  res.status(result.success ? 200 : 500).json(
-    result.success
-      ? { success: true, text: result.text, data: result.data }
-      : { error: 'Failed to generate structured content' }
-  );
+  res
+    .status(result.success ? 200 : 500)
+    .json(
+      result.success
+        ? { success: true, text: result.text, data: result.data, response: result?.response }
+        : { error: 'Failed to generate structured content' }
+    );
 });
 
 app.listen(port, () => {
